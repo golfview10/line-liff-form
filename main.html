@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <title>ยืนยันห้องพัก</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    /* Reset พื้นฐาน */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Kanit', sans-serif;
+    }
+
+    body {
+      background: #f7f9fc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+
+    h2 {
+      color: #0d47a1;
+      margin-bottom: 25px;
+      font-weight: 700;
+      font-size: 1.8rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 18px;
+      border: 2px solid #cfd8dc;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      transition: border-color 0.3s ease;
+      margin-bottom: 20px;
+    }
+    input[type="text"]:focus {
+      border-color: #1976d2;
+      outline: none;
+      box-shadow: 0 0 8px rgba(25, 118, 210, 0.3);
+    }
+
+    button {
+      width: 100%;
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      padding: 14px 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #1565c0;
+    }
+    button:active {
+      background-color: #0d3c7f;
+    }
+
+    .alert {
+      margin-top: 15px;
+      font-weight: 600;
+      color: #d32f2f;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>กรอกเลขห้องของคุณ</h2>
+    <input type="text" id="room" placeholder="เช่น B7101" autocomplete="off" />
+    <button onclick="submitForm()">บันทึก</button>
+    <div id="message" class="alert"></div>
+  </div>
+
+  <script>
+    const LIFF_ID = '2007821737-NovGD58Z'; // ใส่ LIFF ID ของคุณ
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz9kMP6WwJkHDK9XpGtjppCT-hBjRjlIswlKzPyHm9_m0Sw-Auq_w9sMW-d5AGj5_xv-g/exec'; // URL Google Apps Script Web App
+
+    // เริ่มต้น LIFF
+    async function main() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        console.log('LIFF init สำเร็จ');
+
+        if (!liff.isLoggedIn()) {
+          console.log('ยังไม่ได้ login → เรียก liff.login()');
+          liff.login({
+            scope: 'openid profile'
+          });
+        } else {
+          console.log('ผู้ใช้ login แล้ว');
+        }
+      } catch (err) {
+        console.error('เกิดข้อผิดพลาดใน liff.init:', err);
+        document.getElementById('message').textContent = 'ไม่สามารถเริ่ม LIFF ได้: ' + err;
+      }
+    }
+
+    // ฟังก์ชันส่งข้อมูล
+    async function submitForm() {
+      const msgEl = document.getElementById('message');
+      msgEl.textContent = '';
+      const room = document.getElementById('room').value.trim();
+
+      if (!room) {
+        msgEl.textContent = 'กรุณากรอกเลขห้อง';
+        return;
+      }
+
+      try {
+        const profile = await liff.getProfile();
+        const userId = profile.userId;
+        console.log('ดึง userId สำเร็จ:', userId);
+
+        const payload = { userId, room };
+        console.log('ข้อมูลที่ส่ง:', payload);
+
+        const res = await fetch(WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const text = await res.text();
+        console.log('ตอบกลับจาก Apps Script:', text);
+
+        if (text === 'บันทึกสำเร็จ') {
+          msgEl.style.color = 'green';
+          msgEl.textContent = text;
+          document.getElementById('room').value = '';
+        } else {
+          msgEl.style.color = '#d32f2f';
+          msgEl.textContent = text;
+        }
+      } catch (error) {
+        console.error('ข้อผิดพลาด submitForm:', error);
+        msgEl.style.color = '#d32f2f';
+        msgEl.textContent = 'เกิดข้อผิดพลาด: ' + error.message;
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
